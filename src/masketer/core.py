@@ -1,7 +1,66 @@
-# Auto-extracted from '1. Analysis - Summary Analysis.ipynb'
+# -------- Required for this module --------
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import openpyxl  # Excel engine for .xlsx
+
+plt.style.use("default")
+
+import matplotlib as mpl
+mpl.rcParams["font.family"] = "serif"
+mpl.rc("xtick", labelsize=12)
+mpl.rc("ytick", labelsize=12)
+
+# -------- Optional / nice-to-have (import if available) --------
+try:
+    import seaborn as sns
+except Exception:
+    sns = None
+
+# Data & utils (only used in other notebooks/features)
+try:
+    import yfinance as yf
+    import datetime as dt
+except Exception:
+    yf = None
+    dt = None
+
+try:
+    import scipy as spy
+    from scipy.optimize import minimize
+except Exception:
+    spy = None
+    minimize = None
+
+try:
+    from sklearn.metrics import calinski_harabasz_score, silhouette_score, davies_bouldin_score
+    from sklearn.cluster import KMeans
+except Exception:
+    calinski_harabasz_score = silhouette_score = davies_bouldin_score = KMeans = None
+
+try:
+    from pylatex import Document, Section, Subsection, Tabular, Math, TikZ, Axis, Plot, Figure, Matrix, Alignat
+    from pylatex.utils import italic
+except Exception:
+    Document = Section = Subsection = Tabular = Math = TikZ = Axis = Plot = Figure = Matrix = Alignat = italic = None
+
+try:
+    from plottable import Table
+except Exception:
+    Table = None
+
+try:
+    import jupyter_capture_output
+except Exception:
+    jupyter_capture_output = None
+
+try:
+    from openpyxl import Workbook  
+except Exception:
+    Workbook = None
+
+import math
+
 
 def hello():
 
@@ -14,24 +73,57 @@ def hello():
             
     return x, countryname
 
-def master_data():
-    xlsx = pd.ExcelFile(f"{countryname}_Share Price_Combined.xlsx")
-    rdata = pd.read_excel(xlsx, 'SP')
-    rdata= rdata.set_index('Date')
-    rdata = rdata.sort_values('Date').set_index('Date')
-    rdata = rdata.reindex(index= rdata.index[::-1])
-    # ticker = (rdata.columns.values)
+def master_data(
+    prices_file: ExcelLike | None = None,
+    meta_file:   ExcelLike | None = None,
+    prices_sheet: str = "SP",
+    meta_sheet:   str | None = None,  # default to countryname
+):
+    """
+    Load data either from *uploaded files* or from the default filenames.
+    - prices_file: path or BytesIO to "<countryname>_Share Price_Combined.xlsx"
+    - meta_file:   path or BytesIO to "1. Tic_Global.xlsx"
+    - prices_sheet: sheet name for prices (default 'SP')
+    - meta_sheet:   sheet name in meta workbook (default = countryname)
+    Returns: rdata (Date-indexed prices), df0 (metadata)
+    """
+    #resolve country and sheet names
+    if meta_sheet is None:
+        meta_sheet = countryname  # keep your original pattern
 
-    xlsx = pd.ExcelFile('1. Tic_Global.xlsx')
-    df0 = pd.read_excel(xlsx, f"{countryname}") 
-    #df0 = df0.drop(columns=['Company2'])
-    if 'SP' not in pd.ExcelFile(...).sheet_names: raise KeyError("SP sheet missing")
-    if 'Company2' in df0.columns: df0 = df0.drop(columns=['Company2'])
+    # ------- resolve files (uploaded or default names) -------
+    # If caller supplies uploaded files (BytesIO from Streamlit/Jupyter), use them.
+    # Otherwise fall back to your conventional filenames.
+    if prices_file is None:
+        prices_file = f"{countryname}_Share Price_Combined.xlsx"
+    if meta_file is None:
+        meta_file = "1. Tic_Global.xlsx"
+    #safety checks (replace the invalid '...' line) -
+    if not _excel_has_sheet(prices_file, prices_sheet):
+        raise KeyError(f"'{prices_sheet}' sheet missing in prices workbook.")
+    if not _excel_has_sheet(meta_file, meta_sheet):
+        raise KeyError(f"'{meta_sheet}' sheet missing in meta workbook.")
 
+    # read data 
+    xlsx_prices = pd.ExcelFile(prices_file)
+    rdata = pd.read_excel(xlsx_prices, prices_sheet)
+    rdata = rdata.set_index("Date")
+    rdata = rdata.sort_values("Date").set_index("Date")
+    rdata = rdata.reindex(index=rdata.index[::-1])
+
+    xlsx_meta = pd.ExcelFile(meta_file)
+    df0 = pd.read_excel(xlsx_meta, meta_sheet)
+
+    # optional cleanup, only if present (keeps your original intent)
+    if "Company2" in df0.columns:
+        df0 = df0.drop(columns=["Company2"])
+
+    # ------- create placeholders as before -------
     pd.DataFrame().to_excel(f"{countryname}_1-Return analysis.xlsx")
     pd.DataFrame().to_excel(f"{countryname}_2-Summary analysis.xlsx")
 
-    return rdata,df0
+    return rdata, df0
+
     
 
 def country_analysis(countryname):
