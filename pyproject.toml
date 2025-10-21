@@ -1,13 +1,25 @@
 
 [project]
 name = "masketer"
-version = "0.0.1"
-description = "Notebook functions packaged as the 'masketer' Python library."
+version = "0.1.2"                 # bump this!
+description = "Masketer: notebook functions packaged for reuse"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
-dependencies = ["pandas>=2.0","numpy>=1.24","matplotlib>=3.8"]
+dependencies = ["pandas>=2.0", "numpy>=1.24", "matplotlib>=3.8"]
+
+[project.urls]
+Homepage = "https://github.com/ejimeoghenefejiro/masketer_pkg"
+Repository = "https://github.com/ejimeoghenefejiro/masketer_pkg"
+Issues = "https://github.com/ejimeoghenefejiro/masketer_pkg/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+

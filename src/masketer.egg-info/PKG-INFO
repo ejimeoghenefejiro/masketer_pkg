@@ -1,8 +1,11 @@
 Metadata-Version: 2.4
 Name: masketer
-Version: 0.0.1
-Summary: Notebook functions packaged as the 'masketer' Python library.
+Version: 0.1.2
+Summary: Masketer: notebook functions packaged for reuse
 License: MIT
+Project-URL: Homepage, https://github.com/ejimeoghenefejiro/masketer_pkg
+Project-URL: Repository, https://github.com/ejimeoghenefejiro/masketer_pkg
+Project-URL: Issues, https://github.com/ejimeoghenefejiro/masketer_pkg/issues
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 Requires-Dist: pandas>=2.0
