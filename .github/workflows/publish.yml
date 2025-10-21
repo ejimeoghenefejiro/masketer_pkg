@@ -1,18 +1,26 @@
-name: publish
+name: Publish masketer
+
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
+  workflow_dispatch: {}   # allow manual runs
+
 jobs:
-  build-publish:
+  build-and-publish:
     runs-on: ubuntu-latest
+    environment: PYPI_API_TOKEN        # <-- your Environment name
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.11"
+
       - run: python -m pip install --upgrade build twine
+
       - run: python -m build
-      - run: python -m twine upload dist/*
+
+      - name: Upload to TestPyPI
+        run: python -m twine upload --repository-url https://test.pypi.org/legacy/ --skip-existing dist/*
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
