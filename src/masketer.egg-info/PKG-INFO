@@ -1,0 +1,33 @@
+Metadata-Version: 2.4
+Name: masketer
+Version: 0.0.1
+Summary: Notebook functions packaged as the 'masketer' Python library.
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: pandas>=2.0
+Requires-Dist: numpy>=1.24
+Requires-Dist: matplotlib>=3.8
+
+
+# masketer
+
+This packages functions extracted from the notebook **1. Analysis - Summary Analysis.ipynb**.
+The original function names and code are preserved.
+
+## Install (editable, local)
+```bash
+pip install -e .
+```
+
+## Use
+```python
+import masketer
+
+# Examples (adjust to your workflow)
+# masketer.hello()
+# rdata, df0 = masketer.master_data()
+# R, S = masketer.country_analysis("UK")
+# sector, ticker, R, S = masketer.sector_analysis("UK")
+# masketer.KPIs(...)
+```
