@@ -1,22 +1,127 @@
+# First Library Test Work: `masketer` Analysis Demo
 
-# masketer
+## Overview
+*(Short Explanation: This section provides a brief summary of the project.)*
 
-This packages functions extracted from the notebook **1. Analysis - Summary Analysis.ipynb**.
-The original function names and code are preserved.
+This repository contains a Jupyter notebook demonstrating the initial functionality of the **`masketer`** Python library for financial and market data analysis. The notebook currently implements an interactive workflow to:
 
-## Install (editable, local)
+1.  Prompt the user to select an analysis focus (**Country** or **Sector**).
+2.  Specify the target country and sector (demonstrated with **UK** and **Oil & Gas** in the example run).
+3.  Load and plot relevant master data for the selected parameters.
+
+---
+
+## Prerequisites
+*(Short Explanation: This lists the software needed to run the project.)*
+
+To run this notebook, you need the following installed:
+
+* **Python** (The original execution environment used Python 3.14)
+* **Jupyter Notebook** or **JupyterLab**
+
+---
+
+## Installation
+*(Short Explanation: These are the commands to get the required Python packages.)*
+
+The core library, `masketer`, is installed from the **TestPyPI** index, and the optional `seaborn` library is recommended for generating correlation heatmaps.
+
+Use the following commands to install the required packages:
+
 ```bash
-pip install -e .
+# Install the masketer library from TestPyPI
+pip install --index-url [https://test.pypi.org/simple/](https://test.pypi.org/simple/) --extra-index-url [https://pypi.org/simple](https://pypi.org/simple) -U masketer
+# Install seaborn 
+pip install seaborn
+```
+Usage
+1. Data Files
+For the notebook to execute successfully, the following files must be placed in the same folder as the projectname.ipynb file:
+UK_Share Price_Combined.xlsx,SP
+Tic_Global.xlsx,(Default sheet)
+Hello! That's a great way to make the README even more useful by showing the actual code flow.Here is the complete README.md formatted in markdown, incorporating the Core Notebook Logic and all previously requested details:Markdown# First Library Test Work: `masketer` Analysis Demo
+
+## Overview
+*(Short Explanation: This section provides a brief summary of the project.)*
+
+This repository contains a Jupyter notebook demonstrating the initial functionality of the **`masketer`** Python library for financial and market data analysis. The notebook currently implements an interactive workflow to:
+
+1.  Prompt the user to select an analysis focus (**Country** or **Sector**).
+2.  Specify the target country and sector (demonstrated with **UK** and **Oil & Gas** in the example run).
+3.  Load and plot relevant master data for the selected parameters.
+
+---
+
+## Prerequisites
+*(Short Explanation: This lists the software needed to run the project.)*
+
+To run this notebook, you need the following installed:
+
+* **Python** (The original execution environment used Python 3.14)
+* **Jupyter Notebook** or **JupyterLab**
+
+---
+
+## Installation
+*(Short Explanation: These are the commands to get the required Python packages.)*
+
+The core library, `masketer`, is installed from the **TestPyPI** index, and the optional `seaborn` library is recommended for generating correlation heatmaps.
+
+Use the following commands to install the required packages:
+
+```bash
+# Install the masketer library from TestPyPI
+pip install --index-url [https://test.pypi.org/simple/](https://test.pypi.org/simple/) --extra-index-url [https://pypi.org/simple](https://pypi.org/simple) -U masketer
+
+# Install seaborn (optional, recommended for plotting)
+pip install seaborn
+```
+Usage
+1. Data Files
+   For the notebook to execute successfully, the following files must be placed in the same folder as the First Library Test work.ipynb file:File NameRequired Sheet NameUK_Share     Price_Combined.xlsxSPTic_Global.xlsx(Default sheet)
+2. Core Notebook Logic
+   The primary steps within the notebook involve calling functions from the masketer library to handle user input, data loading, analysis, and plotting:
+```bash
+#interactive
+import masketer as m
+import masketer.core as core  # set globals here
+
+# 1) Get user input (1 for Country or 2 for Sector, and the country name)
+x, countryname = m.hello()
+core.x = x
+core.countryname = countryname
+
+# 2) Load datasets (This uses the files listed in the Data Files section)
+rdata, df0 = m.master_data()
+
+# 3) Run sector analysis (you will be prompted for the sector name, e.g., "Oil & Gas")
+sector, tickers, R2, S2 = m.sector_analysis(countryname)
+
+# 4) Generate charts for that sector
+m.KPIs(R2, S2, sector=sector, ticker=tickers) # Plots Key Performance Indicators
+m.corr_ana(R2, sector=sector, rdata=rdata)   # Plots Correlation Analysis
 ```
 
-## Use
-```python
-import masketer
+```base
+#Non-interactive sector (if you already know the sector)
+import masketer as m
+import masketer.core as core
 
-# Examples (adjust to your workflow)
-# masketer.hello()
-# rdata, df0 = masketer.master_data()
-# R, S = masketer.country_analysis("UK")
-# sector, ticker, R, S = masketer.sector_analysis("UK")
-# masketer.KPIs(...)
+core.countryname = "UK"
+rdata, df0 = m.master_data()
+
+# manually set sector (no prompt)
+sector = "Oil & Gas"
+tickers = list(df0.loc[df0['Sector'] == sector, 'Ticker'])
+R2 = rdata[[t for t in tickers if t in rdata.columns]].pct_change(fill_method=None)
+S2 = R2.describe(percentiles=[0.01,0.10,0.50,0.90,0.99]).to_frame().T if False else R2.describe()
+
+m.KPIs(R2, S2, sector=sector, ticker=tickers)
+m.corr_ana(R2, sector=sector, rdata=rdata)
 ```
+3.Execution Steps
+ These are the physical steps to run the notebook.
+ 1. Launch your Jupyter environment.
+ 2. Create a new project and copy the code above. Note the code is in two form interactive and non interactive, copy to different cell on jupyter note.
+ 3. Ensure the required data files (listed above) are in the current folder.
+ 4. Execute the cells sequentially, providing input when prompted.
