@@ -1,8 +1,8 @@
 Metadata-Version: 2.4
 Name: mustafa
-Version: 0.2.0
+Version: 0.2.2
 Summary: Masketer: notebook functions packaged for reuse
-License: MIT
+License-Expression: MIT
 Project-URL: Homepage, https://github.com/ejimeoghenefejiro/masketer_pkg
 Project-URL: Repository, https://github.com/ejimeoghenefejiro/masketer_pkg
 Project-URL: Issues, https://github.com/ejimeoghenefejiro/masketer_pkg/issues

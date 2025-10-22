@@ -1,11 +1,11 @@
 
 [project]
 name = "mustafa"
-version = "0.2.0"    
+version = "0.2.2"    
 description = "Masketer: notebook functions packaged for reuse"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
+license = "MIT"
 dependencies = ["pandas>=2.0", "numpy>=1.24", "matplotlib>=3.8", "openpyxl>=3.1"]
 
 [project.urls]
