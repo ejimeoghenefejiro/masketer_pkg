@@ -6,12 +6,15 @@ import openpyxl  # Excel engine for .xlsx
 from pathlib import Path
 from typing import Union, IO, Optional
 
-plt.style.use("default")
+
+##plt.style.use("default")
 
 import matplotlib as mpl
 mpl.rcParams["font.family"] = "serif"
 mpl.rc("xtick", labelsize=12)
 mpl.rc("ytick", labelsize=12)
+
+plt.style.use("seaborn-v0_8-white")
 
 
 
@@ -312,3 +315,282 @@ def charts():
     KPIs(R, S, sector, ticker)
     corr_ana(R, sector, rdata)
     return x, R, S
+
+# Stock-by-Stock Trading Signals #
+# These do not modify the existing API above.
+
+# Globals used by this sub-module
+SMA: pd.DataFrame | None = None
+SMA_pos: pd.DataFrame | None = None
+ticker: list[str] | None = None
+window: list[int] | None = None
+
+ExcelLike = Union[str, Path, IO[bytes]]
+
+def master_data_stocktrading(
+    prices_file: Optional[ExcelLike] = None,
+    meta_file:   Optional[ExcelLike] = None,
+    prices_sheet: str = "SP",
+    meta_sheet:   Optional[str] = None,
+):
+    """
+    Loads price & metadata for the stock-trading workflow.
+
+    If prices_file/meta_file are omitted, this function behaves exactly like the
+    original: it prompts for country and reads:
+        <COUNTRY>_Share Price_Combined.xlsx  (sheet 'SP')
+        1. Tic_Global.xlsx                    (sheet '<COUNTRY>')
+    If file paths are provided, prompts are skipped when possible.
+
+    Returns
+    -------
+    rdata, df0
+    """
+    try:
+        # Figure out the country/sheet when using defaults
+        if prices_file is None or meta_file is None or meta_sheet is None:
+            _country = input("Please enter the countryname ").strip().upper()
+            if not _country:
+                raise ValueError("Country name cannot be empty.")
+        else:
+            _country = meta_sheet or ""  # may be blank if caller passed meta_sheet explicitly
+
+        # ---- Prices workbook
+        if prices_file is None:
+            prices_path = f"{_country}_Share Price_Combined.xlsx"
+        else:
+            prices_path = prices_file
+
+        # If it's a path-like string, check existence for friendliness
+        if isinstance(prices_path, (str, Path)) and not str(prices_path).startswith("<_io"):
+            if not Path(prices_path).exists():
+                raise FileNotFoundError(
+                    f"Could not find prices workbook: '{prices_path}'. "
+                    "Provide a valid path or place it in the current folder."
+                )
+
+        xlsx_prices = pd.ExcelFile(prices_path)
+        if prices_sheet not in xlsx_prices.sheet_names:
+            raise KeyError(f"Sheet '{prices_sheet}' not found in prices workbook.")
+        rdata = pd.read_excel(xlsx_prices, prices_sheet)
+        if "Date" not in rdata.columns:
+            raise KeyError("Column 'Date' missing in prices sheet.")
+        rdata = rdata.set_index("Date")
+        rdata = rdata.reindex(index=rdata.index[::-1])
+
+        # ---- Meta workbook
+        if meta_file is None:
+            meta_path = "1. Tic_Global.xlsx"
+        else:
+            meta_path = meta_file
+
+        if isinstance(meta_path, (str, Path)) and not str(meta_path).startswith("<_io"):
+            if not Path(meta_path).exists():
+                raise FileNotFoundError(
+                    f"Could not find metadata workbook: '{meta_path}'. "
+                    "Provide a valid path or place it in the current folder."
+                )
+
+        xlsx_meta = pd.ExcelFile(meta_path)
+
+        # If caller did not specify meta_sheet explicitly, default to country sheet
+        _meta_sheet = meta_sheet or _country
+        if _meta_sheet not in xlsx_meta.sheet_names:
+            raise KeyError(f"Sheet '{_meta_sheet}' not found in metadata workbook.")
+
+        df0 = pd.read_excel(xlsx_meta, _meta_sheet)
+        if "Company2" in df0.columns:
+            df0 = df0.drop(columns=["Company2"])
+
+        return rdata, df0
+
+    except Exception as e:
+        raise type(e)(f"[master_data_stocktrading] {e}") from e
+
+
+def trading_data_stocktrading(rdata: pd.DataFrame, df0: pd.DataFrame):
+    """
+    Interactive part: asks for sector and three SMA windows (comma-separated).
+    Returns (SMA, SMA_pos, ticker, window). Matches your notebook logic.
+    """
+    try:
+        # sector prompt
+        _sector = input("Please specify the sector you wish to focus today ? ").strip()
+        if not _sector:
+            raise ValueError("Sector cannot be empty.")
+        print(f"Tickers of Sector: {_sector}")
+
+        # pick tickers for sector
+        if "Sector" not in df0.columns or "Ticker" not in df0.columns:
+            raise KeyError("df0 must contain 'Sector' and 'Ticker' columns.")
+        _tickers = list(df0.loc[df0["Sector"] == _sector, "Ticker"])
+        if not _tickers:
+            raise ValueError(f"No tickers found for sector '{_sector}'.")
+
+        # windows prompt
+        raw = input('Enter the three windows use "," to seperate ')
+        parts = [p.strip() for p in raw.split(",") if p.strip()]
+        if len(parts) < 3:
+            raise ValueError("Please enter three integers, e.g. 20,42,252")
+        _window = [int(p) for p in parts[:3]]
+        if any(w <= 0 for w in _window):
+            raise ValueError("Windows must be positive integers.")
+
+        # compute SMA frames
+        _SMA = pd.DataFrame()
+        for t in _tickers:
+            if t not in rdata.columns:
+                # quietly skip missing tickers but keep going
+                continue
+            for w in _window:
+                _SMA[f"{t} {int(w)}"] = rdata[t].rolling(window=int(w)).mean()
+
+        _SMA_pos = pd.DataFrame(index=_SMA.index)
+        for t in _tickers:
+            if t not in rdata.columns:
+                continue
+            _SMA_pos[t] = rdata[t]
+            _SMA_pos[f"{t} Returns"] = _SMA_pos[t].pct_change(fill_method=None)
+            # positions from first two window pairs (as in your code)
+            for i in range(len(_window) - 1):
+                a, b = _window[i], _window[i + 1]
+                a_col, b_col = f"{t} {a}", f"{t} {b}"
+                if a_col in _SMA and b_col in _SMA:
+                    _SMA_pos[f"Pos {t} {a}"] = np.where(_SMA[a_col] > _SMA[b_col], 1, -1)
+
+        # stash in globals so indi_charts_stocktrading() can use them (like notebook)
+        globals()["SMA"] = _SMA
+        globals()["SMA_pos"] = _SMA_pos
+        globals()["ticker"] = _tickers
+        globals()["window"] = [int(w) for w in _window]
+
+        return _SMA, _SMA_pos, _tickers, _window
+
+    except Exception as e:
+        raise type(e)(f"[trading_data_stocktrading] {e}") from e
+
+
+def stock_data_stocktrading():
+    """
+    Convenience wrapper to chain the two steps, matching your notebook cell:
+        rdata, df0 = master_data()
+        SMA, SMA_pos, ticker, window = trading_data(rdata, df0)
+    """
+    rdata, df0 = master_data_stocktrading()
+    _SMA, _SMA_pos, _ticker, _window = trading_data_stocktrading(rdata, df0)
+    return rdata, _SMA, _SMA_pos, _ticker, _window
+
+
+def indi_charts_stocktrading():
+    """
+    Reproduces the 2x2 summary plots loop for each ticker.
+    Uses the globals created by trading_data_stocktrading()/stock_data_stocktrading().
+    """
+    try:
+        if any(globals().get(n) is None for n in ("SMA", "SMA_pos", "ticker", "window")):
+            raise RuntimeError(
+                "No data to plot. Run stock_data_stocktrading() (or trading_data_stocktrading)"
+                " first to populate SMA, SMA_pos, ticker, window."
+            )
+
+        _SMA: pd.DataFrame = globals()["SMA"]
+        _SMA_pos: pd.DataFrame = globals()["SMA_pos"]
+        _ticker: list[str] = globals()["ticker"]
+        _window: list[int] = globals()["window"]
+
+        # match your plotting style
+        #from matplotlib import pyplot as plt
+        #plt.style.use("seaborn-v0_8-white")
+        #mpl.rcParams["font.family"] = "serif"
+        #mpl.rc("xtick", labelsize=12)
+        #mpl.rc("ytick", labelsize=12)
+
+        for t in _ticker:
+            if t not in _SMA_pos.columns:
+                # skip tickers that were not available in rdata
+                continue
+
+            fig, ax = plt.subplots(
+                2, 2, figsize=(20, 8), dpi=200, sharex=False, sharey=False,
+                squeeze=False, gridspec_kw={"width_ratios": [2, 2], "height_ratios": [1, 1]},
+                constrained_layout=True,
+            )
+            ax = ax.flatten()
+            plt.rcParams.update({"font.size": 15})
+            fig.suptitle(f" Summary Plots for {t}", fontsize=30, color="k", x=0.5, y=1.05)
+
+            i = 0
+            ax[i].plot(_SMA_pos[t].iloc[-100:], color="k", linewidth=3, linestyle="-", label="Stock Price")
+            ax[i].set_title("Stock Price", fontsize=20, y=1.01)
+            ax[i].legend()
+
+            i += 1
+            ax[i].plot(((_SMA_pos[f"{t} Returns"].iloc[-100:] + 1).cumprod() - 1),
+                       color="r", linewidth=3, linestyle="--", label="Cumulative Return")
+            ax[i].set_title("Cumulative Returns", fontsize=20, y=1.01)
+            ax[i].legend()
+
+            i += 1
+            ma_cols = [f"{t} {_window[0]}", f"{t} {_window[1]}", f"{t} {_window[2]}"]
+            present = [c for c in ma_cols if c in _SMA.columns]
+            if present:
+                ax[i].plot(_SMA[present].iloc[-100:])
+                ax[i].legend([f"Mean {_window[0]}", f"Mean {_window[1]}", f"Mean {_window[2]}"])
+            ax[i].set_title("Moving Averages", fontsize=20, y=1.01)
+
+            i += 1
+            ax[i].plot(_SMA_pos[t].iloc[-100:], color="k", linewidth=3, linestyle="-", label="Stock Price")
+            ax[i].set_title("Trading Decison based on Moving Average", fontsize=20, y=1.01)
+            ax[i] = ax[i].twinx()
+            # same two position lines you had
+            pos_a = f"Pos {t} {_window[0]}"
+            pos_b = f"Pos {t} {_window[1]}"
+            if pos_a in _SMA_pos.columns:
+                ax[i].plot(_SMA_pos[pos_a].iloc[-100:], color="r", linewidth=3, linestyle="-",
+                           label=f"{_window[0]} Vs. {_window[1]} Days")
+            if pos_b in _SMA_pos.columns:
+                ax[i].plot(_SMA_pos[pos_b].iloc[-100:], color="b", linewidth=3, linestyle=":",
+                           label=f"{_window[1]} Vs. {_window[2]} Days")
+            ax[i].legend(loc="center", bbox_to_anchor=(0.8, .3))
+
+        plt.show()
+        return
+
+    except Exception as e:
+        raise type(e)(f"[indi_charts_stocktrading] {e}") from e
+
+# One-call interactive entry point (prompts country, sector, windows) 
+def stocktrading(
+    prices_file: Optional[ExcelLike] = None,
+    meta_file:   Optional[ExcelLike] = None,
+    prices_sheet: str = "SP",
+    meta_sheet:   Optional[str] = None,
+):
+    """
+    One-call interactive flow:
+      1) If no files are given, prompts for country and uses the conventional filenames.
+      2) Prompts for sector.
+      3) Prompts for three SMA windows (e.g. 20,42,252).
+      4) Plots the 2x2 summary charts.
+
+    If prices_file/meta_file are provided, they will be used instead of the defaults.
+    Returns (rdata, SMA, SMA_pos, ticker, window).
+    """
+    # Load price/meta (either via passed-in paths or the usual prompts/defaults)
+    rdata, df0 = master_data_stocktrading(
+        prices_file=prices_file,
+        meta_file=meta_file,
+        prices_sheet=prices_sheet,
+        meta_sheet=meta_sheet,
+    )
+
+    # Same interactive sector + window prompts you already had
+    _SMA, _SMA_pos, _ticker, _window = trading_data_stocktrading(rdata, df0)
+
+    # Charts (unchanged)
+    indi_charts_stocktrading()
+
+    return rdata, _SMA, _SMA_pos, _ticker, _window
+
+# end Stock-by-Stock Trading Signal #
+
