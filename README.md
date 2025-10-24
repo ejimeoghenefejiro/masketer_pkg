@@ -16,22 +16,23 @@ This repository contains a Jupyter notebook demonstrating the initial functional
 
 To run this notebook, you need the following installed:
 
-* **Python** (The original execution environment used Python 3.14)
+* **Python ≥ 3.9** (The original execution environment used Python 3.14)
 * **Jupyter Notebook** or **JupyterLab**
 
 ---
 
 ## Installation
-*(Short Explanation: These are the commands to get the required Python packages.)*
-
-The core library, `mustafa`, is installed from the **TestPyPI** 
-
-Use the following commands to install the required packages:
+*Install mustafa from TestPyPI (and optional notebook extras):*
 
 ```bash
 # Install the mustafa library from TestPyPI
 # in a Jupyter cell
 !pip install -q -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple mustafa[notebook]
+```
+If you previously installed mustafa, uninstall it to avoid confusion
+```bash
+!pip uninstall -y mustafa
+
 ```
 Usage
 1. Data Files
@@ -106,3 +107,10 @@ m.corr_ana(R2, sector=sector, rdata=rdata)
  2. Create a new project and copy the code above. Note the code is in two form interactive and non interactive, copy to different cell on jupyter note.
  3. Ensure the required data files (listed above) are in the current folder.
  4. Execute the cells sequentially, providing input when prompted.
+
+
+ ## Stock-by-Stock Trading Signal Mode
+
+Generates rolling moving-average (SMA) trading signals.
+
+Visualizes price trends, cumulative returns, moving averages, and trading positions.
